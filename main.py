@@ -87,7 +87,8 @@ def forecast_players(history, target_x, horizon_hours):
         recent_rate = max(0.0, math.log(last_n / prev_n) / elapsed_hours) if elapsed_hours > 0 and prev_n > 0 else 0.0
     else:
         recent_rate = 0.0
-    return last_n * math.exp(min(proposed_growth, recent_rate * max(0.0, horizon_hours)))
+    # Keep the forecasted tracked base from shrinking below its latest observation.
+    return max(last_n, last_n * math.exp(min(proposed_growth, recent_rate * max(0.0, horizon_hours))))
 
 
 def pava_nonincreasing(values):
@@ -187,6 +188,8 @@ def forecast_case(case):
             count_prediction = None
             if count_fit is not None and players_target > 0 and last_n > 0:
                 beta, _, _, _ = count_fit
+                # Limit noisy log-count fits before extrapolating far beyond the observations.
+                beta = min(2.0, max(-1.0, beta))
                 earned_last = max(0.0, last_rate * last_n / 100)
                 if earned_last > 0:
                     predicted_earned = earned_last * (players_target / last_n) ** beta
